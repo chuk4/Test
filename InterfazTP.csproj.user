@@ -13,9 +13,6 @@
     <Compile Update="ModificarDatosUsuario.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Update="ModificarTitulares.cs">
-      <SubType>Form</SubType>
-    </Compile>
     <Compile Update="Registrar.cs">
       <SubType>Form</SubType>
     </Compile>

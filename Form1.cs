@@ -16,7 +16,6 @@ namespace InterfazTP
         Registrar hijoRegistrar;
         Main hijoMain;
         Login hijoLogin;
-        ModificarTitulares hijoModificarTitulares;
         ModificarDatosUsuario hijoModificarDatosUsuario;
         string Usuario;
         string Contraseña;
@@ -28,8 +27,6 @@ namespace InterfazTP
             InitializeComponent();
             banco = new Banco();
             banco.AltaUsuario("12345678", "12345678", "12345678", "12345678", "12345678", "12345678");//usuario de prueba
-            banco.AltaUsuario("test0001", "test0001", "test1", "test1", "1234", "test1");
-            banco.AltaUsuario("test0002", "test0002", "test2", "test2", "5678", "test2");
             Logued = false;
             hijoLogin = new Login(banco);
             hijoLogin.logued = false;
@@ -53,10 +50,15 @@ namespace InterfazTP
                 hijoLogin.Hide();
                 hijoMain = new Main(new object[] { Usuario, banco });
                 hijoMain.TransFModificarUsuario += TransDelegadoModificarUsuario;
-                hijoMain.TransFModificarTitulares += TransDelegadoModificarTitularesCajaAhorro;
-                hijoMain.TransFCerrarSesion += TransDelegadoCerrarSesion;
                 hijoMain.usuario = Usuario;
                 hijoMain.MdiParent = this;
+                /*
+                banco.AltaCajaAhorro(banco.usuarioActual);
+                banco.AltaCajaAhorro(banco.usuarioActual);
+                banco.Depositar(banco.buscarCaja(1), 10000);
+                banco.BajaCajaAhorro(1);
+                banco.Depositar(banco.buscarCaja(2), 1000);
+                */
                 hijoMain.Show();
             }
             else
@@ -100,6 +102,7 @@ namespace InterfazTP
                 hijoModificarDatosUsuario.MdiParent = this;
                 hijoModificarDatosUsuario.Show();
                 hijoModificarDatosUsuario.TransfEventoModificarUsuarioOk += TransDelegadoModificarUsuarioOk;
+                
             }
         }
 
@@ -113,37 +116,9 @@ namespace InterfazTP
             }
         }
 
-        // Metodo para abrir el form de Modificar Titulares de Cajas de Ahorro
-        private void TransDelegadoModificarTitularesCajaAhorro(bool modificar)
+        private void Form1_Load(object sender, EventArgs e)
         {
-            if(modificar == true)
-            {
-                hijoMain.Hide();
-                hijoModificarTitulares = new ModificarTitulares(banco);
-                hijoModificarTitulares.MdiParent = this;
-                hijoModificarTitulares.Show();
-                hijoModificarTitulares.TransfEventoVolver += TransDelegadoVolverAtrasTitulares;
-            }
-        }
 
-        // Metodo para volver del form Modificar titulares a el form Main
-        public void TransDelegadoVolverAtrasTitulares(bool confirmacion)
-        {
-            if(confirmacion == true)
-            {
-                hijoModificarTitulares.Close();
-                hijoMain.Show();
-            }
         }
-
-        public void TransDelegadoCerrarSesion(bool confirmacion)
-        {
-            if(confirmacion == true)
-            {
-                hijoMain.Close();
-                hijoLogin.Show();
-            }
-        }
-        
     }
 }
