@@ -2,7 +2,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -48,28 +47,48 @@ namespace InterfazTP
                 nuevoUsuario.apellido = apellido;
                 nuevoUsuario.dni = dni;
                 nuevoUsuario.email = email;
-                nuevoUsuario.id = Int32.Parse(dni);
 
                 usuario.Add(nuevoUsuario);
                 return true;
             }
         }
 
-        public bool ModificarUsuario(string user, string password, string nombre, string apellido, string email)
+        public bool ModificarUsuario(string user, string password, string nombre, string apellido, string dni, string email)
         {
             bool result = false;
 
             foreach (var usuario in usuario)
             {
-                if (usuario.id == usuarioActual.id)
+                if (usuario.usuarioLogin == usuarioActual.usuarioLogin)
                 {
-                    usuario.usuarioLogin = user;
-                    usuario.password = password;
-                    usuario.nombre = nombre;
-                    usuario.apellido = apellido;
-                    usuario.email = email;
 
-                    result = true;
+                    if (nombre == "" || apellido == "" || dni == "" || email == "")
+                    {
+                        result = false;
+                    }
+                    else
+                    {
+                        if (user.Length < 8 || password.Length < 8)
+                        {
+                            MessageBox.Show("Usuario y contraseña deben tener minimo 8 caracteres.");
+                            result = false;
+                        }
+                        else
+                        {
+                            usuario.nombre = nombre;
+                            usuario.apellido = apellido;
+                            usuario.email = email;
+                            usuario.usuarioLogin = user;
+                            usuario.password = password;
+
+                            result = true;
+                        }
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("No registrado");
+                    result = false;
                 }
             }
             return result;
@@ -78,7 +97,6 @@ namespace InterfazTP
         public void EliminarUsuario()
         {
             // Copiar codigo de git
-
         }
 
         public void AltaCajaAhorro(Usuario usuarioActual)
@@ -130,7 +148,6 @@ namespace InterfazTP
                 {
                     c.id = 0;
                     c.cbu = 0;
-                    //c.titular.Add();
                 }
                 else
                 {
@@ -140,86 +157,102 @@ namespace InterfazTP
         }
 
         // CLAUDIO
-        public void AltaMovimiento(Movimiento mov, CajaDeAhorro entrada)
+        public void AltaMovimiento(CajaDeAhorro c, string detalle, float monto)
         {
-            movimientos.Add(mov);
-            entrada.movimientos.Add(mov);
+            c.agregarMovimiento(new Movimiento(c, detalle, monto));
         }
 
-        public void AltaPago(Pago pg, Usuario usuarioA)
+        public void AltaPago(Usuario usuario, string nombre, float monto)
         {
-            usuarioA.pagos.Add(pg);
-            // pg.user = usuarioA;  
+            Pago p = new Pago(usuario, nombre, monto);
+            pagos.Add(p);
+            usuarioActual.pagos.Add(p);
         }
 
-        public void BajaPago(int id)
+        public bool BajaPago(int id)
         {
             foreach (var p in pagos)
             {
-                if (p.id == id)
+                if (p.id == id && p.pagado == true)
                 {
                     pagos.Remove(p);
                     usuarioActual.pagos.Remove(p);
-                }
-                else
-                {
-                    Console.WriteLine("salida en 163");
-                }
-            }
-        }
-
-        public void ModificarPago(int id)
-        {
-            foreach (var p in pagos)
-            {
-                if (p.id == (int)id)
-                {
-                    p.pagado = true;
-                }
-            }
-        }
-
-        public bool AltaPlazoFijo(PlazoFijo pfj, int cbu)
-        {
-            foreach (CajaDeAhorro c in caja)
-            {
-                if (c.cbu == cbu && c.saldo >= pfj.monto && pfj.monto >= 1000)
-                {
-                    usuarioActual.pf.Add(pfj);
-                    plazosFijos.Add(pfj);
-                    c.saldo -= pfj.monto;
                     return true;
                 }
             }
             return false;
         }
 
-        public void BajaPlazoFijo(int id)
+        public bool ModificarPago(int id, int identificador)
         {
-            foreach (var p in plazosFijos)
+            foreach (var p in pagos)
             {
-                if (p.id == (int)id)
+                if (p.id == id && p.pagado == false)
                 {
-                    if (p.pagado == true && p.fechaFin > DateTime.Now)
+                    foreach(CajaDeAhorro c in usuarioActual.cajas)
                     {
-                        usuarioActual.pf.Remove(p);
-                        plazosFijos.Remove(p);
+                        if (c.cbu == identificador && c.saldo >= p.monto)
+                        {
+                            p.pagado = true;
+                            c.saldo -= p.monto;
+                            c.agregarMovimiento(new Movimiento(c, "Pago", p.monto));
+                            return true;
+                        }
                     }
-                    else
+                    foreach (TarjetaDeCredito t in usuarioActual.tarjetas)
                     {
-                        Console.WriteLine("salida en 208");
+                        if (t.numero == identificador && (t.limite - t.consumos) >= p.monto)
+                        {
+                            p.pagado = true;
+                            t.consumos += p.monto;
+                            return true;
+                        }
                     }
                 }
             }
+            return false;
+        }
+
+        public bool AltaPlazoFijo(Usuario u, float monto, int cbuDestino)
+        {
+            foreach(CajaDeAhorro c in caja)
+            {
+                if(c.cbu == cbuDestino && c.saldo >= monto && monto >= 1000)
+                {
+                    PlazoFijo pfj = new PlazoFijo(u, monto);
+                    usuarioActual.pf.Add(pfj);
+                    plazosFijos.Add(pfj);
+                    c.saldo -= pfj.monto;    
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool BajaPlazoFijo(int id)
+        {
+            foreach (var p in plazosFijos)
+            {
+                if (p.id == id)
+                {
+                    if (p.pagado == true && (DateTime.Now - p.fechaFin).TotalDays > 30)
+                    {
+                        usuarioActual.pf.Remove(p);
+                        plazosFijos.Remove(p);
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         public void cobrarPlazoFijo(int plazoFijoID)
         {
             foreach (PlazoFijo pf in plazosFijos)
             {
-                if (pf.id == plazoFijoID)
+                if(pf.id == plazoFijoID)
                 {
-                    usuarioActual.cajas.First().saldo = pf.monto + (pf.monto * (pf.getTasa() / 365));
+                    usuarioActual.cajas.First().saldo = pf.monto + (pf.monto*(pf.getTasa() / 365));
                     pf.pagado = true;
                 }
             }
@@ -252,11 +285,12 @@ namespace InterfazTP
                 foreach (Usuario usuarioInd in this.usuario)
                 {
 
-                    if (usuarioInd.usuarioLogin == usuario)
+                    if (usuarioInd.nombre == usuario)
                     {
 
                         if (usuarioInd.bloqueado == false)
                         {
+                            // agregar verificacion usuario
                             if (usuarioInd.password == contrasenia)
                             {
                                 usuarioActual = usuarioInd;
@@ -277,14 +311,14 @@ namespace InterfazTP
                         }
                     }
                 }
-
+           
             }
             catch (Exception i)
             {
 
                 Console.WriteLine("error de " + i);
             }
-            return encontrado;
+        return encontrado;
         }
 
         public void CerrarSesion()
@@ -302,7 +336,7 @@ namespace InterfazTP
                     if (c.id == idCaja)
                     {
                         c.saldo = monto + c.saldo;
-                        c.agregarMovimiento(new Movimiento(c, "Deposito", monto));
+                        AltaMovimiento(c, "Deposito", monto);
                         return true;
                     }
                 }
@@ -319,13 +353,8 @@ namespace InterfazTP
                     if (c.saldo >= monto && c.id == CajaID)
                     {
                         c.saldo = c.saldo - monto;
-                        c.agregarMovimiento(new Movimiento(c, "Retiro", monto));
+                        AltaMovimiento(c, "Retiro", monto);
                         return true;
-                    }
-                    else
-                    {
-                        Console.WriteLine("Fondos insuficientes");
-                        return false;
                     }
                 }
             }
@@ -344,29 +373,23 @@ namespace InterfazTP
                         if (cajaDestinoCBU == ca.cbu)
                         {
                             ca.saldo += monto;
-                            ca.agregarMovimiento(new Movimiento(ca, "Transferencia Recibida", monto));
-                            c.agregarMovimiento(new Movimiento(c, "Transferencia Enviada", monto));
+                            AltaMovimiento(ca, "Transferencia Recibida", monto);
+                            AltaMovimiento(c, "Transferencia Enviada", monto);
                             return true;
                         }
                     }
                 }
             }
-            return false;
+         return false;
         }
 
 
         // MOSTRAR DATOS - Nico
-        public List<Pago> MostrarPagos()
-        {
-            // Verificar el devolver con toList
-            return usuarioActual.pagos.ToList();
-        }
 
-        public List<PlazoFijo> MostrarPlazoFijos()
+        public List<CajaDeAhorro> MostrarCajasDeAhorro()
         {
-            return usuarioActual.pf.ToList();
+            return this.usuarioActual.cajas.ToList();
         }
-
         public List<Movimiento> MostrarMovimientos(int cajaID)
         {
             if (usuarioActual != null)
@@ -381,6 +404,16 @@ namespace InterfazTP
             }
             return null;
         }
+        public List<Pago> MostrarPagos()
+        {
+            return usuarioActual.pagos.ToList();
+        }
+
+        public List<PlazoFijo> MostrarPlazoFijos()
+        {
+            return usuarioActual.pf.ToList();
+        }
+
 
         public List<Movimiento> BuscarMovimiento(CajaDeAhorro cajas, String detalle, DateTime fecha, float monto)
         {
@@ -402,107 +435,20 @@ namespace InterfazTP
                     }
                 }
             }
-            else
-            {
-                Console.WriteLine("error en la lista 135");
-            }
             return nuevo;
         }
 
         public CajaDeAhorro buscarCaja(int id)
         {
             CajaDeAhorro res = null;
-            foreach (CajaDeAhorro c in caja)
+            foreach(CajaDeAhorro c in caja)
             {
-                if (c.id == id)
+                if(c.id == id)
                 {
                     res = c;
                 }
             }
             return res;
-        }
-
-        public List<CajaDeAhorro> MostrarCajasDeAhorro()
-        {
-            return this.usuarioActual.cajas.ToList();
-        }
-
-        public List<Usuario> MostrarUsuarios()
-        {
-            return usuario.ToList();
-        }
-
-        // Metodos para Eliminar y Agregar titulares de Caja de Ahorro
-
-        public bool EliminarTitularCaja(int idUsuario)
-        {
-            bool resultado = true;
-            return resultado;
-        }
-
-        public bool AgregarTitularCaja(int idUsuario, int numCaja)
-        {
-            bool resultado = false;
-            foreach(Usuario t in this.MostrarUsuarios())
-            {
-                if(t.id == idUsuario)
-                {
-                    foreach(CajaDeAhorro c in caja)
-                    {
-                        if(c.id == numCaja)
-                        {
-                            c.titular.Add(t);
-                            t.cajas.Add(c);
-                            resultado = true;
-                        }
-                    }
-                }
-            }
-            return resultado;
-        }
-
-        // Devuelve datos necesarios para mostrar titular en forma de string
-        public string[] MostrarDatosTitular(int numCaja)
-        {
-            foreach (CajaDeAhorro c in caja)
-            {
-                if (c.cbu == numCaja)
-                {
-                    foreach (Usuario t in usuario)
-                    {
-                        if (t.cajas.Contains(c))
-                        {
-                            return new string[] { t.nombre, t.apellido, t.dni };
-                        }
-                    }
-                }
-            }
-            return new string[] { };
-        }
-
-        // Devuelve datos necesarios para mostrar titulares disponibles para agregar
-        public List<Usuario> MostrarTitularesDisponibles(int numCaja)
-        {
-            List<Usuario> titulares = new List<Usuario>();
-
-            for (int i = 0; i < this.MostrarUsuarios().Count; i++)
-            {
-                foreach (CajaDeAhorro c in caja)
-                {
-                    if (c.cbu == numCaja)
-                    {
-                        if (this.MostrarUsuarios()[i].cajas.Contains(c))
-                        {
-
-                        }
-                        else
-                        {
-                            titulares.Add(this.MostrarUsuarios()[i]);
-                        }
-                    }
-                }
-            }
-            return titulares.ToList();
         }
     }
 }

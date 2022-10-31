@@ -49,11 +49,6 @@ namespace InterfazTP
         {
             return this.movimientos.ToList();
         }
-
-        public List<Usuario> obtenerTitulares()
-        {
-            return titular.ToList();
-        }
  
         public string[] toArray()
         {
